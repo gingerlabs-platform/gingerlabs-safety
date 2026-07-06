@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "videoseal-cli"
+version = "0.1.0"
+description = "Standalone CLI for embedding and detecting VideoSeal text watermarks in video pixels."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "platformdirs",
+    "PyYAML",
+    "timm==0.9.16",
+    "torch",
+]
+
+[project.scripts]
+videoseal-cli = "videoseal_cli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["videoseal_cli*"]
+
+[tool.setuptools.package-data]
+"videoseal_cli.videoseal_configs" = ["*.yaml"]
+"videoseal_cli._vendor.videoseal" = ["LICENSE"]
