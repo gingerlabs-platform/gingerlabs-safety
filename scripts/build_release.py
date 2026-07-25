@@ -53,6 +53,8 @@ def main() -> int:
     run(["pyinstaller", "--clean", "videoseal-cli.spec"], env=env)
 
     bundle = ROOT / "dist" / "videoseal-cli"
+    for notice in ("README.md", "THIRD_PARTY_NOTICES.md"):
+        shutil.copy2(ROOT / notice, bundle / notice)
     suffix = ".zip" if platform.system().lower() == "windows" else ".tar.gz"
     archive_dir(bundle, ROOT / "release" / f"videoseal-cli-{args.tag}{suffix}")
     return 0

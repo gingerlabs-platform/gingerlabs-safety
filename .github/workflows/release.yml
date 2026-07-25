@@ -53,10 +53,17 @@ jobs:
           FFPROBE_PATH="$(python -c "import shutil; print(shutil.which('ffprobe') or '')")"
           echo "ffmpeg=$FFMPEG_PATH" >> "$GITHUB_OUTPUT"
           echo "ffprobe=$FFPROBE_PATH" >> "$GITHUB_OUTPUT"
+      - name: Cache PixelSeal checkpoint
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pixelseal-model-cache
+          key: pixelseal-${{ matrix.artifact }}-0c5665cff20eb6ce1b5aaa7d91c19dafb418bfee32d02dd3344e4ed60d9d75bd
       - name: Test
         run: python -m unittest discover -s tests
       - name: Build archive
         run: python scripts/build_release.py --ffmpeg-bin "${{ steps.ffmpeg.outputs.ffmpeg }}" --ffprobe-bin "${{ steps.ffmpeg.outputs.ffprobe }}" --tag "${{ matrix.artifact }}"
+      - name: Test standalone archive
+        run: python scripts/release_smoke_test.py --bundle-dir dist/videoseal-cli --model-cache-dir "${{ runner.temp }}/pixelseal-model-cache" --ffmpeg-bin "${{ steps.ffmpeg.outputs.ffmpeg }}" --ffprobe-bin "${{ steps.ffmpeg.outputs.ffprobe }}"
       - uses: actions/upload-artifact@v4
         with:
           name: videoseal-cli-${{ matrix.artifact }}

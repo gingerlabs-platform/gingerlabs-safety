@@ -2,14 +2,21 @@ import json
 import tempfile
 from pathlib import Path
 
-from .model_cache import default_model_cache_dir, resolve_model_path, verify_model_file
-from .payload import bit_accuracy_percent, expected_bits, legacy_wm_v1_to_message_bits
+from .model_cache import MODEL_FILENAME, default_model_cache_dir, resolve_model_path, verify_model_file
+from .payload import bit_accuracy_percent, expected_bits
 from .runtime_tools import resolve_tool
 from .video_io import move_video, mux_audio_from_source, read_video_rgb, write_video_rgb_h264
 
 
 def embed_command(args) -> dict:
-    from .model import configure_model, frames_to_video_tensor, load_model, message_tensor, model_nbits, video_tensor_to_uint8
+    from .model import (
+        configure_low_impact_embedding,
+        frames_to_video_tensor,
+        load_model,
+        message_tensor,
+        model_nbits,
+        video_tensor_to_uint8,
+    )
 
     input_path = Path(args.input).expanduser().resolve()
     output_path = Path(args.output).expanduser().resolve()
@@ -25,12 +32,13 @@ def embed_command(args) -> dict:
         args.offline,
         args.force_model_download,
     )
-    configure_model(
+    configure_low_impact_embedding(
         model,
         scaling_w=args.scaling_w,
         chunk_size=args.chunk_size,
-        step_size=args.step_size,
-        video_mode=args.video_mode,
+        temporal_pooling=args.temporal_pooling,
+        temporal_pool_size=args.temporal_pool_size,
+        temporal_pool_depth=args.temporal_pool_depth,
     )
 
     nbits = model_nbits(model)
@@ -42,7 +50,7 @@ def embed_command(args) -> dict:
             video,
             msgs=msg,
             is_video=True,
-            lowres_attenuation=bool(args.lowres_attenuation),
+            lowres_attenuation=not bool(args.full_resolution_jnd),
         )
         watermarked = video_tensor_to_uint8(outputs["imgs_w"])
 
@@ -73,9 +81,10 @@ def embed_command(args) -> dict:
         "device": str(device),
         "scaling_w": args.scaling_w,
         "chunk_size": args.chunk_size,
-        "step_size": args.step_size,
-        "video_mode": args.video_mode,
-        "lowres_attenuation": bool(args.lowres_attenuation),
+        "full_resolution_jnd": bool(args.full_resolution_jnd),
+        "temporal_pooling": bool(args.temporal_pooling),
+        "temporal_pool_size": args.temporal_pool_size,
+        "temporal_pool_depth": args.temporal_pool_depth,
         "codec": args.codec,
         "crf": args.crf,
         "pix_fmt": args.pix_fmt,
@@ -84,7 +93,14 @@ def embed_command(args) -> dict:
 
 
 def detect_command(args) -> dict:
-    from .model import aggregate_logits, configure_model, decode_soft_bits, frames_to_video_tensor, load_model, model_nbits
+    from .model import (
+        aggregate_logits,
+        configure_detection,
+        decode_soft_bits,
+        frames_to_video_tensor,
+        load_model,
+        model_nbits,
+    )
 
     input_path = Path(args.input).expanduser().resolve()
     frames, _fps = read_video_rgb(input_path)
@@ -96,7 +112,7 @@ def detect_command(args) -> dict:
         args.offline,
         args.force_model_download,
     )
-    configure_model(model, chunk_size=args.chunk_size)
+    configure_detection(model, chunk_size=args.chunk_size)
 
     nbits = model_nbits(model)
     video = frames_to_video_tensor(frames, device)
@@ -114,11 +130,6 @@ def detect_command(args) -> dict:
         expected = expected_bits(expected_id, nbits)
         accuracy = bit_accuracy_percent(decoded_bits, expected)
         match = decoded_watermark_id == expected_id
-        try:
-            legacy_expected = [bool(bit) for bit in legacy_wm_v1_to_message_bits(expected_id, nbits)]
-            accuracy = max(accuracy, bit_accuracy_percent(decoded_bits, legacy_expected))
-        except ValueError:
-            pass
 
     confidence = float(torch.sigmoid(torch.abs(soft_bits)).mean().item() * 100.0)
     return {
@@ -147,7 +158,7 @@ def doctor_command(args) -> dict:
             checks[tool] = {"ok": False, "error": str(exc)}
 
     cache_dir = Path(args.model_cache_dir).expanduser().resolve() if args.model_cache_dir else default_model_cache_dir()
-    model_path = cache_dir / "videoseal_y_256b_img.pth"
+    model_path = cache_dir / MODEL_FILENAME
     if args.download_model:
         try:
             model_path = resolve_model_path(args.model_cache_dir, offline=False, force_download=args.force_model_download)

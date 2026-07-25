@@ -2,32 +2,52 @@ import argparse
 import sys
 
 
+def bounded_number(value_type, minimum, maximum):
+    def parse(value):
+        parsed = value_type(value)
+        if parsed < minimum or parsed > maximum:
+            raise argparse.ArgumentTypeError(f"must be between {minimum} and {maximum}")
+        return parsed
+
+    return parse
+
+
 def add_runtime_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--model", default="videoseal", help="Only 'videoseal' is supported in standalone v1.")
-    parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="cpu")
-    parser.add_argument("--model-cache-dir", default=None, help="Directory for downloaded VideoSeal checkpoints.")
+    parser.add_argument("--model", choices=["pixelseal"], default="pixelseal")
+    parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
+    parser.add_argument("--model-cache-dir", default=None, help="Directory for the downloaded PixelSeal checkpoint.")
     parser.add_argument("--offline", action="store_true", help="Use only an already cached checkpoint.")
     parser.add_argument("--force-model-download", action="store_true", help="Redownload and reverify the checkpoint.")
-    parser.add_argument("--chunk-size", type=int, default=16)
+    parser.add_argument("--chunk-size", type=bounded_number(int, 1, 128), default=8)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="videoseal-cli",
-        description="Embed and detect VideoSeal text watermarks directly in video pixels.",
+        description="Embed and detect RS-protected PixelSeal watermark IDs directly in video pixels.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    embed = subparsers.add_parser("embed", help="Embed a text watermark ID into video pixels.")
+    embed = subparsers.add_parser("embed", help="Embed a canonical wm_v1 watermark ID into video pixels.")
     embed.add_argument("--input", required=True, help="Input video path.")
     embed.add_argument("--output", required=True, help="Output watermarked video path.")
-    embed.add_argument("--id", required=True, help="Text watermark ID to embed.")
+    embed.add_argument("--id", required=True, help="Canonical wm_v1 ID containing a 16-byte Base64URL payload.")
     add_runtime_args(embed)
-    embed.add_argument("--scaling-w", type=float, default=0.2)
-    embed.add_argument("--step-size", type=int, default=4)
-    embed.add_argument("--video-mode", choices=["repeat", "interpolate", "alternate"], default="repeat")
-    embed.add_argument("--lowres-attenuation", dest="lowres_attenuation", action="store_true", default=True)
-    embed.add_argument("--no-lowres-attenuation", dest="lowres_attenuation", action="store_false")
+    embed.add_argument("--scaling-w", type=bounded_number(float, 0.01, 1.0), default=0.15)
+    embed.add_argument(
+        "--full-resolution-jnd",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Apply JND attenuation at the original frame resolution.",
+    )
+    embed.add_argument(
+        "--temporal-pooling",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable PixelSeal temporal pooling.",
+    )
+    embed.add_argument("--temporal-pool-size", type=bounded_number(int, 2, 16), default=4)
+    embed.add_argument("--temporal-pool-depth", type=bounded_number(int, 1, 7), default=2)
     embed.add_argument("--codec", default="h264", help="ffmpeg video codec. h264 maps to libx264.")
     embed.add_argument("--crf", type=int, default=12)
     embed.add_argument("--pix-fmt", default="yuv420p")

@@ -37,6 +37,15 @@ def to_attr_dict(value: Any) -> Any:
     return value
 
 
+def parse_checkpoint_args(value: Any) -> AttrDict:
+    if isinstance(value, str):
+        value = yaml.safe_load(value)
+    args = to_attr_dict(value)
+    if not isinstance(args, AttrDict):
+        raise ValueError("PixelSeal checkpoint 'args' must be a YAML mapping or dictionary")
+    return args
+
+
 def load_yaml_config(name: str) -> AttrDict:
     resource = resources.files("videoseal_cli.videoseal_configs").joinpath(name)
     with resource.open("r", encoding="utf-8") as handle:
@@ -190,10 +199,28 @@ class VideoSealInferenceModel(nn.Module):
         return {"preds": torch.cat(all_preds, dim=0)}
 
 
-def build_videoseal_from_checkpoint(checkpoint_path: Path) -> VideoSealInferenceModel:
+def build_pixelseal_from_checkpoint(checkpoint_path: Path) -> VideoSealInferenceModel:
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
-    args = to_attr_dict(checkpoint["args"])
+    if not isinstance(checkpoint, dict) or "args" not in checkpoint or "model" not in checkpoint:
+        raise ValueError("invalid PixelSeal checkpoint: expected 'args' and 'model' entries")
+
+    args = parse_checkpoint_args(checkpoint["args"])
+    expected_architecture = {
+        "nbits": 256,
+        "embedder_model": "unet_base_yuv_quant",
+        "extractor_model": "convnext_tiny",
+        "attenuation": "jnd_1_1",
+    }
+    for key, expected in expected_architecture.items():
+        actual = args.get(key)
+        if actual != expected:
+            raise ValueError(
+                f"unsupported PixelSeal checkpoint architecture: expected {key}={expected!r}, got {actual!r}"
+            )
+
     args.img_size = args.get("img_size_proc") or args.get("img_size_extractor")
+    if int(args.img_size) != 256:
+        raise ValueError(f"unsupported PixelSeal processing size: expected 256, got {args.img_size!r}")
     args.hidden_size_multiplier = args.get("hidden_size_multiplier", 2)
     if "videowam_chunk_size" in args and "videoseal_chunk_size" not in args:
         args.videoseal_chunk_size = args.videowam_chunk_size
@@ -233,9 +260,5 @@ def build_videoseal_from_checkpoint(checkpoint_path: Path) -> VideoSealInference
         step_size=int(args.get("videoseal_step_size", 4)),
         blending_method=str(args.get("blending_method", "additive")),
     )
-    message = model.load_state_dict(checkpoint["model"], strict=False)
-    unexpected = list(message.unexpected_keys)
-    missing = list(message.missing_keys)
-    if unexpected or missing:
-        raise RuntimeError(f"checkpoint state did not match model; missing={missing}, unexpected={unexpected}")
+    model.load_state_dict(checkpoint["model"], strict=True)
     return model

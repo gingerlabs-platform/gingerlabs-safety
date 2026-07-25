@@ -1,71 +1,78 @@
 # VideoSeal CLI
 
-Standalone CLI for embedding and detecting an invisible text VideoSeal watermark ID directly in video pixels.
+Standalone CLI for embedding and detecting an invisible, Reed-Solomon-protected PixelSeal watermark ID directly in video pixels.
 
-The release builds are intended to run on clean Windows, Linux, and macOS machines without ComfyUI, Python, or a system ffmpeg install. First use downloads the default VideoSeal checkpoint into a user cache and verifies its SHA256.
+Release archives run on clean Windows, Linux, and macOS machines without ComfyUI, Python, or a system ffmpeg installation. The first embed, detect, or explicit doctor download fetches the PixelSeal checkpoint, verifies its SHA256, and caches it for later offline use.
 
 ## Commands
+
+Embed a canonical 128-bit ID:
 
 ```bash
 videoseal-cli embed \
   --input input.mp4 \
   --output output_watermarked.mp4 \
-  --id watermark-id-001 \
-  --scaling-w 0.2 \
-  --chunk-size 16 \
-  --step-size 4 \
-  --video-mode repeat \
-  --crf 12 \
+  --id wm_v1_k3qV9x7nB4mLp2ZaQ8fTdw \
   --copy-audio
 ```
+
+Detect and optionally compare it:
 
 ```bash
 videoseal-cli detect \
   --input output_watermarked.mp4 \
-  --expected-id watermark-id-001 \
-  --chunk-size 16 \
-  --aggregation avg \
+  --expected-id wm_v1_k3qV9x7nB4mLp2ZaQ8fTdw \
   --format both
 ```
+
+Check the bundled runtime and model cache:
 
 ```bash
 videoseal-cli doctor
 videoseal-cli doctor --download-model
 ```
 
+The low-impact embed defaults are PixelSeal, `scaling_w=0.15`, eight-frame chunks, full-resolution JND attenuation, and no temporal pooling. Advanced controls include:
+
+```text
+--scaling-w 0.15
+--chunk-size 8
+--full-resolution-jnd / --no-full-resolution-jnd
+--temporal-pooling / --no-temporal-pooling
+--temporal-pool-size 4
+--temporal-pool-depth 2
+```
+
+## Payload
+
+Only canonical IDs in this format are accepted:
+
+```text
+wm_v1_<22 unpadded Base64URL characters>
+```
+
+The suffix must decode to exactly 16 bytes. PixelSeal has a 256-bit message capacity, so the CLI encodes the 16 ID bytes with 16 Reed-Solomon parity bytes as an RS(32,16) codeword. Detection can correct up to eight corrupted bytes and reports `payload_encoding: "wm_v1_rs16"` after successful validation.
+
+Version 0.2.0 intentionally removes arbitrary text/CRC payloads, the original repeated 128-bit format, and the older VideoSeal model.
+
 ## Model Cache
 
-Default model:
+The PixelSeal checkpoint is approximately 1.24 GB:
 
 ```text
-https://dl.fbaipublicfiles.com/videoseal/y_256b_img.pth
+URL:    https://dl.fbaipublicfiles.com/videoseal/pixelseal/checkpoint.pth
+SHA256: 0c5665cff20eb6ce1b5aaa7d91c19dafb418bfee32d02dd3344e4ed60d9d75bd
 ```
 
-Expected SHA256:
+The cache defaults to `platformdirs.user_cache_dir("videoseal-cli", "GingerLabs") / "models"`.
 
-```text
-3d2ff2523d2a89e3532c6dfdcf693098799326e9b3e74c185e815e9baa8340a3
-```
+- `--model-cache-dir PATH` selects a different cache.
+- `--offline` requires an already verified checkpoint and performs no download.
+- `--force-model-download` replaces and reverifies the PixelSeal checkpoint.
 
-Cache directory defaults to `platformdirs.user_cache_dir("videoseal-cli", "GingerLabs") / "models"`.
-
-Useful flags:
-
-- `--model-cache-dir PATH` uses a custom cache directory.
-- `--offline` refuses network access and requires the checkpoint to already be cached.
-- `--force-model-download` redownloads and reverifies the checkpoint.
-
-## Payload Format
-
-The current payload format stores the literal UTF-8 text from `--id` in the model bit capacity. For the default 256-bit model, the text can be at most 31 UTF-8 bytes.
-
-When the text is 27 bytes or shorter, the payload includes CRC32 protection and detection reports `payload_encoding: text_crc32`. Text from 28 to 31 bytes is stored without CRC and detection reports `payload_encoding: text`.
-
-The decoder also supports the older repeated 128-bit `wm_v1_<base64url>` format as a legacy fallback and reports `payload_encoding: wm_v1_legacy`.
+Older cached VideoSeal checkpoint files are ignored and are not deleted automatically.
 
 ## Development
-
-For local Python development:
 
 ```bash
 python -m pip install -e . pyinstaller
@@ -73,4 +80,4 @@ python -m videoseal_cli --help
 python -m unittest discover -s tests
 ```
 
-Developer runs may use `ffmpeg` and `ffprobe` from `PATH`. Release builds bundle those binaries.
+Developer runs can use `ffmpeg` and `ffprobe` from `PATH`. Release archives bundle both tools. Third-party notices are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

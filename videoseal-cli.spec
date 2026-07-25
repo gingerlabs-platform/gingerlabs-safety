@@ -24,6 +24,7 @@ ffprobe = required_binary("FFPROBE_BIN", "ffprobe.exe" if os.name == "nt" else "
 datas = []
 datas += collect_data_files("videoseal_cli.videoseal_configs")
 datas += collect_data_files("videoseal_cli._vendor.videoseal", includes=["LICENSE"])
+datas += collect_data_files("videoseal_cli._vendor.reedsolo", includes=["LICENSE"])
 
 binaries = [
     (ffmpeg, "."),
@@ -33,6 +34,7 @@ binaries = [
 hiddenimports = []
 hiddenimports += collect_submodules("timm")
 hiddenimports += collect_submodules("videoseal_cli._vendor.videoseal.modules")
+hiddenimports += collect_submodules("videoseal_cli._vendor.reedsolo")
 hiddenimports += [
     "videoseal_cli._vendor.videoseal.models.blender",
     "videoseal_cli._vendor.videoseal.models.embedder",

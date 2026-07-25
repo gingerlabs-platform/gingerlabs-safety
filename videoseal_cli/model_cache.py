@@ -10,10 +10,10 @@ from pathlib import Path
 from platformdirs import user_cache_dir
 
 
-MODEL_URL = "https://dl.fbaipublicfiles.com/videoseal/y_256b_img.pth"
-MODEL_FILENAME = "videoseal_y_256b_img.pth"
-MODEL_SHA256 = "3d2ff2523d2a89e3532c6dfdcf693098799326e9b3e74c185e815e9baa8340a3"
-MODEL_SIZE_BYTES = 228_351_471
+MODEL_URL = "https://dl.fbaipublicfiles.com/videoseal/pixelseal/checkpoint.pth"
+MODEL_FILENAME = "pixelseal_checkpoint.pth"
+MODEL_SHA256 = "0c5665cff20eb6ce1b5aaa7d91c19dafb418bfee32d02dd3344e4ed60d9d75bd"
+MODEL_SIZE_BYTES = 1_237_429_197
 
 
 def default_model_cache_dir() -> Path:
@@ -57,7 +57,7 @@ def download_model(model_path: Path) -> Path:
     if temp_path.exists():
         temp_path.unlink()
 
-    print(f"downloading VideoSeal checkpoint to {model_path}", file=sys.stderr)
+    print(f"downloading PixelSeal checkpoint to {model_path}", file=sys.stderr)
     try:
         with urllib.request.urlopen(MODEL_URL, timeout=30) as response, temp_path.open("wb") as output:
             expected = int(response.headers.get("Content-Length") or MODEL_SIZE_BYTES)
@@ -76,16 +76,16 @@ def download_model(model_path: Path) -> Path:
     except (OSError, urllib.error.URLError) as exc:
         if temp_path.exists():
             temp_path.unlink()
-        raise RuntimeError(f"failed to download VideoSeal checkpoint from {MODEL_URL}: {exc}") from exc
+        raise RuntimeError(f"failed to download PixelSeal checkpoint from {MODEL_URL}: {exc}") from exc
 
     actual_hash = sha256_file(temp_path)
     if actual_hash.lower() != MODEL_SHA256:
         temp_path.unlink(missing_ok=True)
         raise RuntimeError(
-            "downloaded VideoSeal checkpoint failed SHA256 verification: "
+            "downloaded PixelSeal checkpoint failed SHA256 verification: "
             f"expected {MODEL_SHA256}, got {actual_hash}"
         )
 
     os.replace(temp_path, model_path)
-    print("VideoSeal checkpoint downloaded and verified", file=sys.stderr)
+    print("PixelSeal checkpoint downloaded and verified", file=sys.stderr)
     return model_path

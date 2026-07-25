@@ -1,7 +1,7 @@
 from typing import Any
 
 from .payload import logits_to_payload, payload_to_message_bits
-from .inference_model import build_videoseal_from_checkpoint
+from .inference_model import build_pixelseal_from_checkpoint
 from .model_cache import resolve_model_path
 
 
@@ -38,13 +38,13 @@ def load_model(
     offline: bool,
     force_model_download: bool,
 ):
-    if model_card != "videoseal":
-        raise ValueError("standalone v1 only supports --model videoseal")
+    if model_card != "pixelseal":
+        raise ValueError("standalone CLI only supports --model pixelseal")
     torch, _ = require_runtime_imports()
 
     device = select_device(device_name)
     checkpoint_path = resolve_model_path(model_cache_dir, offline, force_model_download)
-    model = build_videoseal_from_checkpoint(checkpoint_path)
+    model = build_pixelseal_from_checkpoint(checkpoint_path)
 
     model.eval()
     model.to(device)
@@ -61,16 +61,35 @@ def model_nbits(model: Any) -> int:
     return int(nbits)
 
 
-def configure_model(model: Any, scaling_w: float | None = None, chunk_size: int | None = None,
-                    step_size: int | None = None, video_mode: str | None = None) -> None:
-    if scaling_w is not None and hasattr(model, "blender") and hasattr(model.blender, "scaling_w"):
-        model.blender.scaling_w = float(scaling_w)
-    if chunk_size is not None and hasattr(model, "chunk_size"):
-        model.chunk_size = int(chunk_size)
-    if step_size is not None and hasattr(model, "step_size"):
-        model.step_size = int(step_size)
-    if video_mode is not None and hasattr(model, "video_mode"):
-        model.video_mode = video_mode
+def configure_detection(model: Any, chunk_size: int) -> None:
+    model.chunk_size = int(chunk_size)
+
+
+def configure_low_impact_embedding(
+    model: Any,
+    scaling_w: float,
+    chunk_size: int,
+    temporal_pooling: bool,
+    temporal_pool_size: int,
+    temporal_pool_depth: int,
+) -> None:
+    model.blender.scaling_w = float(scaling_w)
+    model.chunk_size = int(chunk_size)
+    model.step_size = 1
+    model.video_mode = "repeat"
+
+    unet = getattr(getattr(model, "embedder", None), "unet", None)
+    if unet is None or not hasattr(unet, "time_pooling"):
+        raise ValueError("PixelSeal embedder does not support temporal pooling configuration")
+
+    unet.time_pooling = bool(temporal_pooling)
+    if temporal_pooling:
+        unet.time_pooling_depth = int(temporal_pool_depth)
+        unet.temporal_pool.kernel_size = int(temporal_pool_size)
+        unet.temporal_pool.stride = int(temporal_pool_size)
+    else:
+        unet.temporal_pool.kernel_size = 1
+        unet.temporal_pool.stride = 1
 
 
 def frames_to_video_tensor(frames, device):
