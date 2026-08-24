@@ -81,3 +81,6 @@ python -m unittest discover -s tests
 ```
 
 Developer runs can use `ffmpeg` and `ffprobe` from `PATH`. Release archives bundle both tools. Third-party notices are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Optional development/build environment paths are documented in
+[`docs/environment-setup.md`](docs/environment-setup.md); the CLI has no
+production service credentials.

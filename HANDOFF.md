@@ -51,7 +51,8 @@ the current payload.
 
 ## Resume checklist
 
-1. Read `README.md`, `pyproject.toml`, and `THIRD_PARTY_NOTICES.md`.
+1. Read `README.md`, `docs/environment-setup.md`, `pyproject.toml`, and
+   `THIRD_PARTY_NOTICES.md`.
 2. Run the full unit suite.
 3. Preserve canonical ID validation and checksum verification.
 4. Never commit model checkpoints, generated release archives, or credentials.
