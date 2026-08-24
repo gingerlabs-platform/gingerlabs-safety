@@ -1,6 +1,10 @@
 # Repository handoff
 
-Last reviewed: 2026-08-23
+Last reviewed: 2026-08-24
+
+Read the canonical
+[GingerLabs stack manifest](https://github.com/gingerlabs-platform/telegram-bot/blob/main/STACK_MANIFEST.md)
+before changing shared PixelSeal assumptions or report integration contracts.
 
 ## Purpose
 
