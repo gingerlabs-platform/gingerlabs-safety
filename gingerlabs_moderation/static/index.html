@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GingerLabs moderation tester</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Local safety tool</p>
+          <h1>Image moderation tester</h1>
+          <p class="lede">
+            Check the proposed Wan output policy before it is connected to any GingerLabs product.
+          </p>
+        </div>
+        <span class="local-badge"><span aria-hidden="true"></span> Local only</span>
+      </header>
+
+      <section class="policy-strip" aria-labelledby="policy-title">
+        <div>
+          <p class="section-label" id="policy-title">Blocks</p>
+          <p>Visible nipple, penis, vagina, and bare buttocks</p>
+        </div>
+        <div>
+          <p class="section-label">Does not block by itself</p>
+          <p>Cleavage, covered anatomy, male chest, belly, armpits, feet, or faces</p>
+        </div>
+      </section>
+
+      <section class="tester-card">
+        <div
+          class="drop-zone"
+          id="drop-zone"
+          tabindex="0"
+          role="button"
+          aria-controls="file-input"
+          aria-describedby="upload-help"
+        >
+          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
+          <span class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 15.5v2.25A2.25 2.25 0 0 0 7.25 20h9.5A2.25 2.25 0 0 0 19 17.75V15.5" />
+            </svg>
+          </span>
+          <strong>Drop images here</strong>
+          <span>or choose files</span>
+          <small id="upload-help">JPEG, PNG, or WebP · up to 12 images · 15 MB each</small>
+        </div>
+
+        <div class="selection" id="selection" hidden>
+          <div class="selection-header">
+            <p><strong id="selection-count">0 images</strong> selected</p>
+            <button class="text-button" type="button" id="clear-button">Clear</button>
+          </div>
+          <div class="file-chips" id="file-chips"></div>
+        </div>
+
+        <details class="settings">
+          <summary>Detection thresholds</summary>
+          <p class="settings-note">Tune these while evaluating false positives. Defaults are provisional.</p>
+          <div class="settings-grid">
+            <label>
+              <span>Exact parts <output id="exact-output">45%</output></span>
+              <input id="exact-threshold" type="range" min="0.1" max="0.95" value="0.45" step="0.05" />
+            </label>
+            <label>
+              <span>Bare buttocks <output id="buttocks-output">65%</output></span>
+              <input id="buttocks-threshold" type="range" min="0.1" max="0.95" value="0.65" step="0.05" />
+            </label>
+            <label>
+              <span>NudeNet candidates <output id="candidate-output">35%</output></span>
+              <input id="candidate-threshold" type="range" min="0.1" max="0.95" value="0.35" step="0.05" />
+            </label>
+          </div>
+        </details>
+
+        <div class="action-row">
+          <p>No image is uploaded or retained. Processing happens on this computer.</p>
+          <button class="primary-button" type="button" id="analyze-button" disabled>
+            Analyze images
+          </button>
+        </div>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="results-section" id="results-section" hidden aria-labelledby="results-title">
+        <div class="results-heading">
+          <div>
+            <p class="eyebrow">Policy preview</p>
+            <h2 id="results-title">Results</h2>
+          </div>
+          <p>Boxes are diagnostic and are never saved.</p>
+        </div>
+        <div class="results-grid" id="results-grid"></div>
+      </section>
+    </main>
+
+    <template id="result-template">
+      <article class="result-card">
+        <div class="image-stage"><div class="image-frame"><img alt="" /></div></div>
+        <div class="result-body">
+          <div class="verdict-row">
+            <div>
+              <p class="result-name"></p>
+              <p class="result-size"></p>
+            </div>
+            <span class="verdict"></span>
+          </div>
+          <div class="reason-list"></div>
+          <details class="detection-details">
+            <summary>Detection details</summary>
+            <div class="detection-list"></div>
+          </details>
+        </div>
+      </article>
+    </template>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

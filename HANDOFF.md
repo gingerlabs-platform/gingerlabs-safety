@@ -1,6 +1,6 @@
 # Repository handoff
 
-Last reviewed: 2026-08-24
+Last reviewed: 2026-08-31
 
 Read the canonical
 [GingerLabs stack manifest](https://github.com/gingerlabs-platform/telegram-bot/blob/main/STACK_MANIFEST.md)
@@ -14,7 +14,7 @@ ComfyUI.
 
 ## Current state
 
-- Working branch at handoff: `main`.
+- Working branch at handoff: `codex/nudenet-policy-tester`.
 - Baseline commit before this handoff: `ee7e6dea5ca9`.
 - Package version: `0.2.0`.
 - The only accepted payload is `wm_v1_<22 Base64URL characters>`.
@@ -22,6 +22,9 @@ ComfyUI.
   formats are intentionally unsupported.
 - The PixelSeal checkpoint is downloaded on demand, SHA-256 verified, and
   cached locally.
+- The optional `gingerlabs_moderation` package is a local-only image policy
+  experiment. It is not integrated with Desktop, backend job state, RunPod, or
+  any production service.
 
 ## Important files
 
@@ -32,6 +35,9 @@ ComfyUI.
 - `pyproject.toml`: package metadata and console entry point.
 - `videoseal-cli.spec`: PyInstaller release definition.
 - `THIRD_PARTY_NOTICES.md`: redistributed component notices.
+- `gingerlabs_moderation/`: CPU detector adapters, narrow policy, and local
+  upload interface.
+- `Start Moderation Tester.cmd`: Windows one-click local tester launcher.
 
 ## Local verification
 
