@@ -10,7 +10,7 @@ The bundled Reed-Solomon implementation is copyright Tomer Filiba, Stephen Larro
 
 ## Optional local moderation dependencies
 
-The image moderation tester installs these components only when the
+The image and video moderation tester installs these components only when the
 `moderation` extra is selected. They are not bundled into VideoSeal CLI release
 archives.
 

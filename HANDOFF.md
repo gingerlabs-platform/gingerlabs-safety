@@ -22,7 +22,7 @@ ComfyUI.
   formats are intentionally unsupported.
 - The PixelSeal checkpoint is downloaded on demand, SHA-256 verified, and
   cached locally.
-- The optional `gingerlabs_moderation` package is a local-only image policy
+- The optional `gingerlabs_moderation` package is a local-only image and video policy
   experiment. It is not integrated with Desktop, backend job state, RunPod, or
   any production service.
 
@@ -36,7 +36,8 @@ ComfyUI.
 - `videoseal-cli.spec`: PyInstaller release definition.
 - `THIRD_PARTY_NOTICES.md`: redistributed component notices.
 - `gingerlabs_moderation/`: CPU detector adapters, narrow policy, and local
-  upload interface.
+  image/video upload interface. Video analysis samples at a bounded interval
+  and removes its temporary local file immediately afterward.
 - `Start Moderation Tester.cmd`: Windows one-click local tester launcher.
 
 ## Local verification

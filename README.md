@@ -85,7 +85,7 @@ Optional development/build environment paths are documented in
 [`docs/environment-setup.md`](docs/environment-setup.md); the CLI has no
 production service credentials.
 
-## Local Image Moderation Tester
+## Local Media Moderation Tester
 
 This repository also contains an isolated CPU-only experiment for the proposed
 Wan output policy. It is not connected to GingerLabs Desktop, the backend,
@@ -100,9 +100,11 @@ Start Moderation Tester.cmd
 The first run creates a short-path environment under `%LOCALAPPDATA%\GLMod` to
 avoid Windows package path limits, installs the optional dependencies,
 downloads and SHA-256 verifies the pinned 5.2 MB exact-parts model, opens
-`http://127.0.0.1:8765`, and keeps all uploaded images in memory only. The
-NudeNet 320n model is included by its Python package. The first installation can
-take several minutes because the CPU inference runtime is installed locally.
+`http://127.0.0.1:8765`. Images stay in memory. Videos are copied to a temporary
+local file for seekable decoding and deleted immediately after analysis; no
+media is uploaded or retained. The NudeNet 320n model is included by its Python
+package. The first installation can take several minutes because the CPU
+inference runtime is installed locally.
 
 Manual setup is also supported:
 
@@ -123,6 +125,11 @@ The experimental blocking policy is deliberately narrow:
   affect the verdict.
 
 Thresholds are adjustable in the tester because the defaults are provisional.
+The tester accepts JPEG, PNG, WebP, MP4, WebM, and MOV. Videos are sampled every
+0.5 seconds by default, with a configurable 0.25–5 second interval and a hard
+limit of 120 evenly distributed frames. A video is blocked when any sampled
+frame blocks. This is sampled-frame evaluation, not proof that every video frame
+is safe; production use still requires an explicit sampling and review policy.
 Do not connect this policy to product delivery until it has been evaluated on a
 representative, rights-cleared dataset containing both target content and hard
 negatives such as cleavage, swimwear, side breast, underboob, and skin-toned

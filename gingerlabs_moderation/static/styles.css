@@ -276,7 +276,7 @@ h2 {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -295,6 +295,14 @@ h2 {
 .settings-grid input {
   width: 100%;
   accent-color: var(--accent);
+}
+
+.settings-grid label > small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .action-row {
@@ -391,6 +399,18 @@ h2 {
   height: auto;
   max-width: 100%;
   max-height: 480px;
+}
+
+.image-frame video {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  max-height: 480px;
+  background: #111;
+}
+
+.video-frame {
+  width: 100%;
 }
 
 .detection-box {
@@ -515,6 +535,27 @@ h2 {
 .detection-score {
   align-self: center;
   font-weight: 700;
+}
+
+.frame-result + .frame-result {
+  margin-top: 12px;
+}
+
+.timestamp-button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #f6f1e9;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.timestamp-button:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 button:focus-visible,

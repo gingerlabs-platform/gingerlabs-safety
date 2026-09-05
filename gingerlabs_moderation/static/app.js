@@ -9,6 +9,20 @@ const status = document.querySelector("#status");
 const resultsSection = document.querySelector("#results-section");
 const resultsGrid = document.querySelector("#results-grid");
 const resultTemplate = document.querySelector("#result-template");
+const sampleInterval = document.querySelector("#sample-interval");
+const sampleOutput = document.querySelector("#sample-output");
+
+const ACCEPTED_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+]);
+const VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
+const VIDEO_SUFFIXES = new Set(["mp4", "webm", "mov"]);
+const MAX_FILES = 12;
 
 const thresholdControls = [
   ["exact-threshold", "exact-output"],
@@ -20,18 +34,39 @@ let selectedFiles = [];
 let previewUrls = [];
 
 function setFiles(files) {
-  const acceptable = Array.from(files).filter((file) =>
-    ["image/jpeg", "image/png", "image/webp"].includes(file.type),
-  );
-  selectedFiles = [...selectedFiles, ...acceptable].slice(0, 12);
+  const incoming = Array.from(files);
+  const acceptable = incoming.filter(isAcceptedFile);
+  const merged = [...selectedFiles, ...acceptable];
+  const overflow = Math.max(0, merged.length - MAX_FILES);
+  selectedFiles = merged.slice(0, MAX_FILES);
   renderSelection();
+  const ignored = incoming.length - acceptable.length;
+  if (ignored > 0) {
+    status.textContent = `${ignored} unsupported ${ignored === 1 ? "file was" : "files were"} ignored.`;
+  } else if (overflow > 0) {
+    status.textContent = `Only the first ${MAX_FILES} files can be analyzed together.`;
+  } else {
+    status.textContent = "";
+  }
+}
+
+function fileSuffix(file) {
+  return file.name.split(".").pop()?.toLowerCase() || "";
+}
+
+function isVideoFile(file) {
+  return VIDEO_TYPES.has(file.type) || VIDEO_SUFFIXES.has(fileSuffix(file));
+}
+
+function isAcceptedFile(file) {
+  return ACCEPTED_TYPES.has(file.type) || VIDEO_SUFFIXES.has(fileSuffix(file));
 }
 
 function renderSelection() {
   fileChips.replaceChildren();
   selection.hidden = selectedFiles.length === 0;
   analyzeButton.disabled = selectedFiles.length === 0;
-  selectionCount.textContent = `${selectedFiles.length} ${selectedFiles.length === 1 ? "image" : "images"}`;
+  selectionCount.textContent = `${selectedFiles.length} ${selectedFiles.length === 1 ? "file" : "files"}`;
 
   selectedFiles.forEach((file, index) => {
     const chip = document.createElement("div");
@@ -75,12 +110,43 @@ function addDetectionBox(frame, detection, result) {
   frame.append(box);
 }
 
-function renderResult(result) {
+function formatDuration(seconds) {
+  const value = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.floor(value / 60);
+  const remainder = value - minutes * 60;
+  return minutes > 0 ? `${minutes}m ${remainder.toFixed(1)}s` : `${remainder.toFixed(1)}s`;
+}
+
+function formatTimestamp(seconds) {
+  const value = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.floor(value / 60);
+  const remainder = value - minutes * 60;
+  return `${String(minutes).padStart(2, "0")}:${remainder.toFixed(2).padStart(5, "0")}`;
+}
+
+function makeDetectionRow(detection, prefix = "") {
+  const row = document.createElement("div");
+  row.className = "detection-row";
+  const label = document.createElement("div");
+  const name = document.createElement("strong");
+  name.textContent = `${prefix}${detection.label}`;
+  const source = document.createElement("span");
+  source.textContent = `${detection.detector === "exact_parts" ? "Exact-parts detector" : "NudeNet"} · ${detection.role}`;
+  const score = document.createElement("div");
+  score.className = "detection-score";
+  score.textContent = `${Math.round(detection.score * 100)}%`;
+  label.append(name, source);
+  row.append(label, score);
+  return row;
+}
+
+function renderResult(result, analyzedFiles) {
   const card = resultTemplate.content.firstElementChild.cloneNode(true);
-  const file = selectedFiles[result.index];
+  const file = analyzedFiles[result.index];
   const stage = card.querySelector(".image-stage");
   const frame = stage.querySelector(".image-frame");
   const image = frame.querySelector("img");
+  const video = frame.querySelector("video");
   const verdict = card.querySelector(".verdict");
   const reasons = card.querySelector(".reason-list");
   const details = card.querySelector(".detection-details");
@@ -90,8 +156,16 @@ function renderResult(result) {
   if (file) {
     const url = URL.createObjectURL(file);
     previewUrls.push(url);
-    image.src = url;
-    image.alt = `Preview of ${result.filename}`;
+    if (result.mediaType === "video" || isVideoFile(file)) {
+      frame.classList.add("video-frame");
+      video.src = url;
+      video.hidden = false;
+      video.setAttribute("aria-label", `Preview of ${result.filename}`);
+      image.hidden = true;
+    } else {
+      image.src = url;
+      image.alt = `Preview of ${result.filename}`;
+    }
   }
 
   if (result.error) {
@@ -103,7 +177,9 @@ function renderResult(result) {
     return card;
   }
 
-  card.querySelector(".result-size").textContent = `${result.width} × ${result.height}`;
+  card.querySelector(".result-size").textContent = result.mediaType === "video"
+    ? `${result.width} × ${result.height} · ${formatDuration(result.durationSeconds)} · ${result.sampledFrameCount} frames sampled`
+    : `${result.width} × ${result.height}`;
   verdict.textContent = result.decision.toUpperCase();
   verdict.className = `verdict ${result.decision}`;
 
@@ -113,7 +189,11 @@ function renderResult(result) {
     reasons.append(makeText("reason", "No configured blocking category was confirmed."));
   }
 
-  const candidates = result.detections.filter((detection) => detection.role === "candidate");
+  const detections = result.detections || [];
+  const videoFrames = result.frames || [];
+  const candidates = result.mediaType === "video"
+    ? videoFrames.flatMap((sample) => sample.detections || []).filter((detection) => detection.role === "candidate")
+    : detections.filter((detection) => detection.role === "candidate");
   if (candidates.length) {
     reasons.append(
       makeText(
@@ -123,25 +203,42 @@ function renderResult(result) {
     );
   }
 
-  result.detections.forEach((detection) => {
-    addDetectionBox(frame, detection, result);
-    const row = document.createElement("div");
-    row.className = "detection-row";
-    const label = document.createElement("div");
-    const name = document.createElement("strong");
-    name.textContent = detection.label;
-    const source = document.createElement("span");
-    source.textContent = `${detection.detector === "exact_parts" ? "Exact-parts detector" : "NudeNet"} · ${detection.role}`;
-    const score = document.createElement("div");
-    score.className = "detection-score";
-    score.textContent = `${Math.round(detection.score * 100)}%`;
-    label.append(name, source);
-    row.append(label, score);
-    detectionList.append(row);
-  });
-
-  if (!result.detections.length) {
-    detectionList.append(makeText("reason", "Neither detector returned a result above the configured thresholds."));
+  if (result.mediaType === "video") {
+    const relevantFrames = videoFrames.filter(
+      (sample) => sample.decision === "block" || (sample.detections || []).length > 0,
+    );
+    details.querySelector("summary").textContent = `Sampled frame details (${result.sampledFrameCount})`;
+    relevantFrames.forEach((sample) => {
+      const group = document.createElement("section");
+      group.className = "frame-result";
+      const timestamp = document.createElement("button");
+      timestamp.type = "button";
+      timestamp.className = "timestamp-button";
+      timestamp.textContent = `${formatTimestamp(sample.timestampSeconds)} · ${sample.decision.toUpperCase()}`;
+      timestamp.title = "Jump to this point in the video";
+      timestamp.addEventListener("click", () => {
+        video.currentTime = Number(sample.timestampSeconds) || 0;
+        void video.play();
+      });
+      group.append(timestamp);
+      (sample.detections || []).forEach((detection) => {
+        group.append(makeDetectionRow(detection));
+      });
+      detectionList.append(group);
+    });
+    if (!relevantFrames.length) {
+      detectionList.append(
+        makeText("reason", "No sampled frame returned a detection above the configured thresholds."),
+      );
+    }
+  } else {
+    detections.forEach((detection) => {
+      addDetectionBox(frame, detection, result);
+      detectionList.append(makeDetectionRow(detection));
+    });
+    if (!detections.length) {
+      detectionList.append(makeText("reason", "Neither detector returned a result above the configured thresholds."));
+    }
   }
   return card;
 }
@@ -151,26 +248,28 @@ async function analyze() {
   analyzeButton.textContent = "Analyzing…";
   status.textContent = "The first run may take longer while the CPU models load.";
   const form = new FormData();
-  selectedFiles.forEach((file) => form.append("files", file));
+  const analyzedFiles = [...selectedFiles];
+  analyzedFiles.forEach((file) => form.append("files", file));
   form.append("exact_parts_threshold", document.querySelector("#exact-threshold").value);
   form.append("buttocks_threshold", document.querySelector("#buttocks-threshold").value);
   form.append("candidate_threshold", document.querySelector("#candidate-threshold").value);
+  form.append("video_sample_interval_seconds", sampleInterval.value);
 
   try {
     const response = await fetch("/api/analyze", { method: "POST", body: form });
-    if (!response.ok) throw new Error("The local tester could not analyze these images.");
+    if (!response.ok) throw new Error("The local tester could not analyze this media.");
     const payload = await response.json();
     if (payload.error) throw new Error(payload.error);
     clearPreviews();
-    resultsGrid.replaceChildren(...payload.results.map(renderResult));
+    resultsGrid.replaceChildren(...payload.results.map((result) => renderResult(result, analyzedFiles)));
     resultsSection.hidden = false;
     resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    status.textContent = `${payload.results.length} ${payload.results.length === 1 ? "image" : "images"} analyzed locally.`;
+    status.textContent = `${payload.results.length} ${payload.results.length === 1 ? "file" : "files"} analyzed locally.`;
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : "Analysis failed.";
   } finally {
     analyzeButton.disabled = selectedFiles.length === 0;
-    analyzeButton.textContent = "Analyze images";
+    analyzeButton.textContent = "Analyze media";
   }
 }
 
@@ -207,4 +306,8 @@ thresholdControls.forEach(([inputId, outputId]) => {
   input.addEventListener("input", () => {
     output.textContent = `${Math.round(Number(input.value) * 100)}%`;
   });
+});
+
+sampleInterval.addEventListener("input", () => {
+  sampleOutput.textContent = `Every ${Number(sampleInterval.value).toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}s`;
 });
