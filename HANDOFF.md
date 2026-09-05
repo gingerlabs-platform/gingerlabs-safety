@@ -1,6 +1,20 @@
 # Repository handoff
 
-Last reviewed: 2026-08-24
+## Source baseline - 2026-09-05
+
+`main` is the consolidated source baseline after the history-preserving promotion PR.
+It is **not** an instruction to deploy, restart services or repoint production.
+
+PixelSeal CLI plus the optional local image/video moderation tester. The tester is not wired into Desktop, mobile, backend job gating or RunPod. Verification: 35 unit tests passed; one opt-in real PixelSeal checkpoint integration test was not run. No model binaries, uploaded media or release artifacts are published by this promotion.
+
+Read the [canonical stack manifest](https://github.com/gingerlabs-platform/telegram-bot/blob/main/STACK_MANIFEST.md)
+and [promotion record](https://github.com/gingerlabs-platform/telegram-bot/blob/main/docs/MAIN-PROMOTION-20260905.md)
+for the cross-repository refs, checks and deployment boundary.
+
+The earlier handoff below is historical; its branch tips, test counts, endpoint releases
+and temporary URLs are superseded where they differ from the records above.
+
+Last reviewed: 2026-08-31
 
 Read the canonical
 [GingerLabs stack manifest](https://github.com/gingerlabs-platform/telegram-bot/blob/main/STACK_MANIFEST.md)
@@ -14,7 +28,7 @@ ComfyUI.
 
 ## Current state
 
-- Working branch at handoff: `main`.
+- Working branch at handoff: `codex/nudenet-policy-tester`.
 - Baseline commit before this handoff: `ee7e6dea5ca9`.
 - Package version: `0.2.0`.
 - The only accepted payload is `wm_v1_<22 Base64URL characters>`.
@@ -22,6 +36,9 @@ ComfyUI.
   formats are intentionally unsupported.
 - The PixelSeal checkpoint is downloaded on demand, SHA-256 verified, and
   cached locally.
+- The optional `gingerlabs_moderation` package is a local-only image and video policy
+  experiment. It is not integrated with Desktop, backend job state, RunPod, or
+  any production service.
 
 ## Important files
 
@@ -32,6 +49,10 @@ ComfyUI.
 - `pyproject.toml`: package metadata and console entry point.
 - `videoseal-cli.spec`: PyInstaller release definition.
 - `THIRD_PARTY_NOTICES.md`: redistributed component notices.
+- `gingerlabs_moderation/`: CPU detector adapters, narrow policy, and local
+  image/video upload interface. Video analysis samples at a bounded interval
+  and removes its temporary local file immediately afterward.
+- `Start Moderation Tester.cmd`: Windows one-click local tester launcher.
 
 ## Local verification
 

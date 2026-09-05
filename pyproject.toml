@@ -16,13 +16,26 @@ dependencies = [
     "torch",
 ]
 
+[project.optional-dependencies]
+moderation = [
+    "fastapi==0.141.1",
+    "nudenet==3.4.2",
+    "opencv-python-headless>=4.10,<5",
+    "Pillow>=10,<13",
+    "python-multipart==0.0.32",
+    "ultralytics==8.4.135",
+    "uvicorn==0.52.4",
+]
+
 [project.scripts]
 videoseal-cli = "videoseal_cli.cli:main"
+gingerlabs-moderation-tester = "gingerlabs_moderation.web:main"
 
 [tool.setuptools.packages.find]
-include = ["videoseal_cli*"]
+include = ["videoseal_cli*", "gingerlabs_moderation*"]
 
 [tool.setuptools.package-data]
 "videoseal_cli.videoseal_configs" = ["*.yaml"]
 "videoseal_cli._vendor.videoseal" = ["LICENSE"]
 "videoseal_cli._vendor.reedsolo" = ["LICENSE"]
+"gingerlabs_moderation" = ["static/*"]
