@@ -1,5 +1,19 @@
 # Repository handoff
 
+## Source baseline - 2026-09-05
+
+`main` is the consolidated source baseline after the history-preserving promotion PR.
+It is **not** an instruction to deploy, restart services or repoint production.
+
+PixelSeal CLI plus the optional local image/video moderation tester. The tester is not wired into Desktop, mobile, backend job gating or RunPod. Verification: 35 unit tests passed; one opt-in real PixelSeal checkpoint integration test was not run. No model binaries, uploaded media or release artifacts are published by this promotion.
+
+Read the [canonical stack manifest](https://github.com/gingerlabs-platform/telegram-bot/blob/main/STACK_MANIFEST.md)
+and [promotion record](https://github.com/gingerlabs-platform/telegram-bot/blob/main/docs/MAIN-PROMOTION-20260905.md)
+for the cross-repository refs, checks and deployment boundary.
+
+The earlier handoff below is historical; its branch tips, test counts, endpoint releases
+and temporary URLs are superseded where they differ from the records above.
+
 Last reviewed: 2026-08-31
 
 Read the canonical

@@ -1,5 +1,16 @@
 # VideoSeal CLI
 
+## Source baseline - 2026-09-05
+
+`main` is the consolidated source baseline after the history-preserving promotion PR.
+It is **not** an instruction to deploy, restart services or repoint production.
+
+PixelSeal CLI plus the optional local image/video moderation tester. The tester is not wired into Desktop, mobile, backend job gating or RunPod. Verification: 35 unit tests passed; one opt-in real PixelSeal checkpoint integration test was not run. No model binaries, uploaded media or release artifacts are published by this promotion.
+
+Read the [canonical stack manifest](https://github.com/gingerlabs-platform/telegram-bot/blob/main/STACK_MANIFEST.md)
+and [promotion record](https://github.com/gingerlabs-platform/telegram-bot/blob/main/docs/MAIN-PROMOTION-20260905.md)
+for the cross-repository refs, checks and deployment boundary.
+
 Standalone CLI for embedding and detecting an invisible, Reed-Solomon-protected PixelSeal watermark ID directly in video pixels.
 
 Release archives run on clean Windows, Linux, and macOS machines without ComfyUI, Python, or a system ffmpeg installation. The first embed, detect, or explicit doctor download fetches the PixelSeal checkpoint, verifies its SHA256, and caches it for later offline use.
